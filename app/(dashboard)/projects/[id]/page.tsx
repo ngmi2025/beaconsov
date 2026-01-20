@@ -61,6 +61,11 @@ export default function ProjectPage() {
   
   // Copy/download feedback state
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null)
+  
+  // Analysis state
+  const [runningAnalysis, setRunningAnalysis] = useState(false)
+  const [analysisError, setAnalysisError] = useState<string | null>(null)
+  const [snapshots, setSnapshots] = useState<any[]>([])
 
   const supabase = createClient()
 
@@ -130,7 +135,43 @@ export default function ProjectPage() {
 
     if (keywordData) setKeywords(keywordData)
 
+    // Load SOV snapshots
+    const { data: snapshotData } = await supabase
+      .from('sov_snapshots')
+      .select('*')
+      .eq('project_id', projectId)
+      .order('snapshot_date', { ascending: false })
+
+    if (snapshotData) setSnapshots(snapshotData)
+
     setLoading(false)
+  }
+
+  // Run Analysis
+  const runAnalysis = async () => {
+    setRunningAnalysis(true)
+    setAnalysisError(null)
+
+    try {
+      const res = await fetch(`/api/projects/${projectId}/analyze`, {
+        method: 'POST',
+      })
+      const data = await res.json()
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Analysis failed')
+      }
+
+      // Reload data to get new snapshots
+      await loadProjectData()
+      
+      setCopyFeedback(`Analysis complete! ${data.message}`)
+      setTimeout(() => setCopyFeedback(null), 4000)
+    } catch (err) {
+      setAnalysisError(err instanceof Error ? err.message : 'Analysis failed')
+    } finally {
+      setRunningAnalysis(false)
+    }
   }
 
   // AI Suggestions handlers
@@ -319,17 +360,67 @@ export default function ProjectPage() {
     await loadProjectData()
   }
 
-  // Generate dummy data based on real brands and keywords
+  // Separate brands
   const yourBrands = brands.filter(b => b.is_primary)
   const competitors = brands.filter(b => !b.is_primary)
+  
+  // Check if we have real data
+  const hasRealData = snapshots.length > 0
 
+  // Calculate leaderboard from real data or use dummy data
   const leaderboardData = useMemo(() => {
     if (brands.length === 0) return []
+    
+    // Use real data if available
+    if (hasRealData) {
+      const mentionCounts: Record<string, number> = {}
+      const recommendCounts: Record<string, number> = {}
+      let totalResponses = 0
+      
+      // Count mentions per brand
+      brands.forEach(b => {
+        mentionCounts[b.id] = 0
+        recommendCounts[b.id] = 0
+      })
+      
+      // Get unique responses (dedupe by keyword_id + llm_provider)
+      const uniqueResponses = new Map<string, typeof snapshots[0]>()
+      snapshots.forEach(s => {
+        const key = `${s.keyword_id}-${s.llm_provider}`
+        if (!uniqueResponses.has(key)) {
+          uniqueResponses.set(key, s)
+          totalResponses++
+        }
+        if (s.was_mentioned) mentionCounts[s.brand_id]++
+        if (s.was_recommended) recommendCounts[s.brand_id]++
+      })
+      
+      // Calculate SOV
+      const totalMentions = Object.values(mentionCounts).reduce((a, b) => a + b, 0)
+      
+      return brands
+        .map(b => ({
+          brandId: b.id,
+          brand: b.name,
+          isYourBrand: b.is_primary,
+          mentions: mentionCounts[b.id] || 0,
+          recommendations: recommendCounts[b.id] || 0,
+          totalResponses: Math.floor(totalResponses / brands.length),
+          sov: totalMentions > 0 ? Math.round((mentionCounts[b.id] / totalMentions) * 100) : 0,
+          trend: '→' as const,
+          trendValue: 0,
+          rank: 0,
+        }))
+        .sort((a, b) => b.sov - a.sov)
+        .map((entry, index) => ({ ...entry, rank: index + 1 }))
+    }
+    
+    // Fall back to dummy data
     return generateLeaderboard(
       yourBrands.map(b => ({ id: b.id, name: b.name })),
       competitors.map(b => ({ id: b.id, name: b.name }))
     )
-  }, [brands])
+  }, [brands, snapshots, hasRealData])
 
   // Auto-select top 3 brands + user's brand for the chart
   useEffect(() => {
@@ -355,22 +446,97 @@ export default function ProjectPage() {
     })
   }
 
+  // Calculate trends from real data or use dummy data
   const trendData = useMemo(() => {
     if (brands.length === 0) return []
+    
+    if (hasRealData) {
+      // Group snapshots by date
+      const byDate: Record<string, typeof snapshots> = {}
+      snapshots.forEach(s => {
+        const date = s.snapshot_date
+        if (!byDate[date]) byDate[date] = []
+        byDate[date].push(s)
+      })
+      
+      // Calculate SOV per date
+      return Object.keys(byDate)
+        .sort()
+        .map(date => {
+          const daySnapshots = byDate[date]
+          const mentionCounts: Record<string, number> = {}
+          brands.forEach(b => mentionCounts[b.id] = 0)
+          
+          daySnapshots.forEach(s => {
+            if (s.was_mentioned) mentionCounts[s.brand_id]++
+          })
+          
+          const totalMentions = Object.values(mentionCounts).reduce((a, b) => a + b, 0)
+          
+          const point: Record<string, string | number> = {
+            date,
+            label: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          }
+          
+          brands.forEach(b => {
+            point[b.name] = totalMentions > 0 ? Math.round((mentionCounts[b.id] / totalMentions) * 100) : 0
+          })
+          
+          return point
+        })
+    }
+    
     return generateTrendData(
       brands.map(b => ({ id: b.id, name: b.name, isYourBrand: b.is_primary })),
       8
     )
-  }, [brands])
+  }, [brands, snapshots, hasRealData])
 
+  // Calculate keyword SOV from real data or use dummy data
   const keywordSOVData = useMemo(() => {
     if (keywords.length === 0 || yourBrands.length === 0) return []
+    
+    if (hasRealData) {
+      return keywords.map(kw => {
+        const kwSnapshots = snapshots.filter(s => s.keyword_id === kw.id)
+        const mentionCounts: Record<string, number> = {}
+        brands.forEach(b => mentionCounts[b.id] = 0)
+        
+        kwSnapshots.forEach(s => {
+          if (s.was_mentioned) mentionCounts[s.brand_id]++
+        })
+        
+        const totalMentions = Object.values(mentionCounts).reduce((a, b) => a + b, 0)
+        const yourBrand = yourBrands[0]
+        const yourMentions = yourBrand ? mentionCounts[yourBrand.id] || 0 : 0
+        const yourSOV = totalMentions > 0 ? Math.round((yourMentions / totalMentions) * 100) : 0
+        
+        // Find leader
+        let leader = { name: 'None', sov: 0 }
+        brands.forEach(b => {
+          const sov = totalMentions > 0 ? Math.round((mentionCounts[b.id] / totalMentions) * 100) : 0
+          if (sov > leader.sov) {
+            leader = { name: b.is_primary ? 'You! 🎉' : b.name, sov }
+          }
+        })
+        
+        return {
+          keyword: kw.keyword,
+          keywordId: kw.id,
+          yourSOV,
+          leader: leader.name,
+          leaderSOV: leader.sov,
+          totalResponses: kwSnapshots.length,
+        }
+      })
+    }
+    
     return generateKeywordSOV(
       keywords.map(k => ({ id: k.id, keyword: k.keyword })),
       yourBrands[0]?.name || 'Your Brand',
       competitors.map(c => c.name)
     )
-  }, [keywords, yourBrands, competitors])
+  }, [keywords, yourBrands, competitors, brands, snapshots, hasRealData])
 
   // CSV Generation functions
   const generateLeaderboardCSV = () => {
@@ -459,6 +625,14 @@ export default function ProjectPage() {
           ✓ {copyFeedback}
         </div>
       )}
+
+      {/* Analysis error toast */}
+      {analysisError && (
+        <div className="fixed top-4 right-4 z-50 px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg shadow-lg">
+          ⚠️ {analysisError}
+          <button onClick={() => setAnalysisError(null)} className="ml-2 opacity-70 hover:opacity-100">×</button>
+        </div>
+      )}
       
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
@@ -473,22 +647,38 @@ export default function ProjectPage() {
         </div>
         <div className="flex flex-col items-end gap-2">
           <button
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#84CC16] hover:bg-[#65a30d] text-black font-semibold rounded-xl transition-all"
+            onClick={runAnalysis}
+            disabled={runningAnalysis || keywords.length === 0 || brands.length === 0}
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#84CC16] hover:bg-[#65a30d] disabled:bg-slate-600 disabled:cursor-not-allowed text-black disabled:text-slate-400 font-semibold rounded-xl transition-all"
           >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            Run Analysis
+            {runningAnalysis ? (
+              <>
+                <div className="w-5 h-5 border-2 border-black/30 border-t-black rounded-full animate-spin" />
+                Analyzing...
+              </>
+            ) : (
+              <>
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Run Analysis
+              </>
+            )}
           </button>
-          <p className="text-xs text-slate-500">
-            Last updated: {new Date(project.updated_at).toLocaleDateString('en-US', { 
-              month: 'short', 
-              day: 'numeric',
-              hour: 'numeric',
-              minute: '2-digit'
-            })}
-          </p>
+          <div className="text-right">
+            <p className="text-xs text-slate-500">
+              Last updated: {new Date(project.updated_at).toLocaleDateString('en-US', { 
+                month: 'short', 
+                day: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit'
+              })}
+            </p>
+            {!hasRealData && (
+              <p className="text-xs text-amber-500/70">Using sample data • Run analysis for real results</p>
+            )}
+          </div>
         </div>
       </div>
 
