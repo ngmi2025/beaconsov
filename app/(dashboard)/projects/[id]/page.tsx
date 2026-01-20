@@ -53,6 +53,9 @@ export default function ProjectPage() {
   const [newKeyword, setNewKeyword] = useState('')
   const [addingCompetitor, setAddingCompetitor] = useState(false)
   const [addingKeyword, setAddingKeyword] = useState(false)
+  
+  // Chart brand selection state
+  const [selectedBrandsForChart, setSelectedBrandsForChart] = useState<Set<string>>(new Set())
 
   const supabase = createClient()
 
@@ -302,6 +305,30 @@ export default function ProjectPage() {
     )
   }, [brands])
 
+  // Auto-select top 3 brands + user's brand for the chart
+  useEffect(() => {
+    if (leaderboardData.length > 0 && selectedBrandsForChart.size === 0) {
+      const top3Ids = leaderboardData.slice(0, 3).map(b => b.brandId)
+      const yourBrandIds = yourBrands.map(b => b.id)
+      
+      // Combine top 3 + user's brand (if not already in top 3)
+      const initialSelection = new Set([...top3Ids, ...yourBrandIds])
+      setSelectedBrandsForChart(initialSelection)
+    }
+  }, [leaderboardData, yourBrands])
+
+  const toggleBrandForChart = (brandId: string) => {
+    setSelectedBrandsForChart(prev => {
+      const next = new Set(prev)
+      if (next.has(brandId)) {
+        next.delete(brandId)
+      } else {
+        next.add(brandId)
+      }
+      return next
+    })
+  }
+
   const trendData = useMemo(() => {
     if (brands.length === 0) return []
     return generateTrendData(
@@ -510,48 +537,78 @@ export default function ProjectPage() {
           <div className="p-6">
             <div className="mb-6">
               <h2 className="text-lg font-semibold text-slate-50">SOV Over Time</h2>
-              <p className="text-sm text-slate-400">Weekly Share of Voice trends</p>
+              <p className="text-sm text-slate-400">Weekly Share of Voice trends • Click brand names to toggle</p>
             </div>
 
             {trendData.length > 0 ? (
-              <div className="h-96">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={trendData}>
-                    <XAxis 
-                      dataKey="label" 
-                      stroke="#64748b"
-                      tick={{ fill: '#64748b', fontSize: 12 }}
-                    />
-                    <YAxis 
-                      stroke="#64748b"
-                      tick={{ fill: '#64748b', fontSize: 12 }}
-                      domain={[0, 100]}
-                      tickFormatter={(value) => `${value}%`}
-                    />
-                    <Tooltip 
-                      contentStyle={{ 
-                        backgroundColor: '#1a1625', 
-                        border: '1px solid rgba(255,255,255,0.1)',
-                        borderRadius: '8px',
-                      }}
-                      labelStyle={{ color: '#f8fafc' }}
-                      formatter={(value) => [`${(value as number)?.toFixed(1) ?? 0}%`, '']}
-                    />
-                    <Legend />
-                    {brands.map((brand) => (
-                      <Line
-                        key={brand.id}
-                        type="monotone"
-                        dataKey={brand.name}
-                        stroke={brandColors[brand.name]}
-                        strokeWidth={brand.is_primary ? 3 : 2}
-                        dot={{ fill: brandColors[brand.name], r: 4 }}
-                        activeDot={{ r: 6 }}
+              <>
+                <div className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={trendData}>
+                      <XAxis 
+                        dataKey="label" 
+                        stroke="#64748b"
+                        tick={{ fill: '#64748b', fontSize: 12 }}
                       />
-                    ))}
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
+                      <YAxis 
+                        stroke="#64748b"
+                        tick={{ fill: '#64748b', fontSize: 12 }}
+                        domain={[0, 100]}
+                        tickFormatter={(value) => `${value}%`}
+                      />
+                      <Tooltip 
+                        contentStyle={{ 
+                          backgroundColor: '#1a1625', 
+                          border: '1px solid rgba(255,255,255,0.1)',
+                          borderRadius: '8px',
+                        }}
+                        labelStyle={{ color: '#f8fafc' }}
+                        formatter={(value) => [`${(value as number)?.toFixed(1) ?? 0}%`, '']}
+                      />
+                      {brands
+                        .filter(brand => selectedBrandsForChart.has(brand.id))
+                        .map((brand) => (
+                          <Line
+                            key={brand.id}
+                            type="monotone"
+                            dataKey={brand.name}
+                            stroke={brandColors[brand.name]}
+                            strokeWidth={brand.is_primary ? 3 : 2}
+                            dot={{ fill: brandColors[brand.name], r: 4 }}
+                            activeDot={{ r: 6 }}
+                          />
+                        ))}
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+                
+                {/* Custom clickable legend */}
+                <div className="mt-6 flex flex-wrap justify-center gap-x-4 gap-y-2">
+                  {brands.map((brand) => {
+                    const isSelected = selectedBrandsForChart.has(brand.id)
+                    const color = brandColors[brand.name]
+                    return (
+                      <button
+                        key={brand.id}
+                        onClick={() => toggleBrandForChart(brand.id)}
+                        className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                          isSelected
+                            ? 'bg-white/10'
+                            : 'bg-transparent opacity-40 hover:opacity-70'
+                        }`}
+                      >
+                        <span
+                          className="w-3 h-3 rounded-full"
+                          style={{ backgroundColor: color }}
+                        />
+                        <span style={{ color: isSelected ? color : '#94a3b8' }}>
+                          {brand.name}
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </>
             ) : (
               <div className="h-64 flex items-center justify-center text-slate-400">
                 Add brands and run analysis to see trends
