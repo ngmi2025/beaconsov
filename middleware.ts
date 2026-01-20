@@ -2,13 +2,33 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
+  // Skip middleware if Supabase isn't configured
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  if (!supabaseUrl || !supabaseKey) {
+    // Supabase not configured - allow public pages, block dashboard
+    const protectedRoutes = ['/dashboard', '/brands', '/queries', '/results', '/settings']
+    const isProtectedRoute = protectedRoutes.some(route => 
+      request.nextUrl.pathname.startsWith(route)
+    )
+
+    if (isProtectedRoute) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/login'
+      return NextResponse.redirect(url)
+    }
+
+    return NextResponse.next()
+  }
+
   let supabaseResponse = NextResponse.next({
     request,
   })
 
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    supabaseUrl,
+    supabaseKey,
     {
       cookies: {
         getAll() {
