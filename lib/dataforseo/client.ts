@@ -1,5 +1,7 @@
-const DATAFORSEO_API_URL = 'https://api.dataforseo.com/v3'
-// Use sandbox for testing: 'https://sandbox.dataforseo.com/v3'
+// Use sandbox for testing (free), switch to production when ready
+const DATAFORSEO_API_URL = process.env.DATAFORSEO_USE_PRODUCTION === 'true' 
+  ? 'https://api.dataforseo.com/v3'
+  : 'https://sandbox.dataforseo.com/v3'
 
 function getAuthHeader(): string {
   const credentials = `${process.env.DATAFORSEO_LOGIN}:${process.env.DATAFORSEO_PASSWORD}`
