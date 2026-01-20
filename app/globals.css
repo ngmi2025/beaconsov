@@ -1,0 +1,438 @@
+@import "tailwindcss";
+
+/* ============================================
+   BEACONSOV - PREMIUM BRAND SYSTEM
+   Tailwind CSS v4 Theme Configuration
+   ============================================ */
+
+@theme {
+  /* Primary Palette - Deep Violet */
+  --color-primary: #6D28D9;
+  --color-primary-light: #8B5CF6;
+  --color-primary-dark: #5B21B6;
+  
+  /* Accent - Electric Lime */
+  --color-accent: #84CC16;
+  --color-accent-light: #A3E635;
+  --color-accent-dark: #65A30D;
+  
+  /* Coral - Secondary Accent */
+  --color-coral: #F97316;
+  --color-coral-light: #FB923C;
+  
+  /* Background - Near-black with purple tint */
+  --color-bg-deep: #0C0A1D;
+  --color-bg-card: #13111C;
+  --color-bg-elevated: #1A1726;
+  
+  /* Text - Warm whites */
+  --color-text-primary: #F8FAFC;
+  --color-text-secondary: #94A3B8;
+  --color-text-muted: #64748B;
+  
+  /* Glass effect */
+  --color-glass-bg: oklch(0.45 0.15 285 / 0.05);
+  --color-glass-border: oklch(0.65 0.15 285 / 0.15);
+}
+
+/* ============================================
+   BASE STYLES
+   ============================================ */
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #0C0A1D;
+  color: #F8FAFC;
+  overflow-x: hidden;
+}
+
+/* ============================================
+   GRADIENT BACKGROUNDS
+   ============================================ */
+
+.gradient-bg {
+  background: #0C0A1D;
+  position: relative;
+}
+
+.gradient-bg::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(109, 40, 217, 0.3) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 40% at 100% 0%, rgba(139, 92, 246, 0.15) 0%, transparent 40%);
+  pointer-events: none;
+}
+
+/* Subtle dot pattern overlay */
+.dot-pattern {
+  background-image: radial-gradient(rgba(139, 92, 246, 0.15) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+/* ============================================
+   ANIMATED GRADIENT ORB
+   ============================================ */
+
+.gradient-orb {
+  position: absolute;
+  width: 600px;
+  height: 600px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(109, 40, 217, 0.4) 0%, rgba(139, 92, 246, 0.1) 40%, transparent 70%);
+  filter: blur(60px);
+  animation: float-orb 20s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.gradient-orb-2 {
+  position: absolute;
+  width: 400px;
+  height: 400px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(132, 204, 22, 0.2) 0%, transparent 60%);
+  filter: blur(80px);
+  animation: float-orb-2 15s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes float-orb {
+  0%, 100% { 
+    transform: translate(0, 0) scale(1); 
+  }
+  33% { 
+    transform: translate(30px, -50px) scale(1.1); 
+  }
+  66% { 
+    transform: translate(-20px, 30px) scale(0.95); 
+  }
+}
+
+@keyframes float-orb-2 {
+  0%, 100% { 
+    transform: translate(0, 0); 
+  }
+  50% { 
+    transform: translate(-40px, 40px); 
+  }
+}
+
+/* ============================================
+   GRADIENT TEXT
+   ============================================ */
+
+.gradient-text {
+  background: linear-gradient(135deg, #84CC16 0%, #A3E635 50%, #F97316 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.gradient-text-purple {
+  background: linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ============================================
+   GLASS MORPHISM CARDS
+   ============================================ */
+
+.glass-card {
+  background: rgba(139, 92, 246, 0.05);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(139, 92, 246, 0.15);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-card:hover {
+  background: rgba(139, 92, 246, 0.1);
+  border-color: rgba(139, 92, 246, 0.3);
+  transform: translateY(-4px);
+  box-shadow: 
+    0 20px 40px rgba(109, 40, 217, 0.15),
+    0 0 0 1px rgba(139, 92, 246, 0.2);
+}
+
+/* ============================================
+   BUTTONS
+   ============================================ */
+
+.btn-primary {
+  background: linear-gradient(135deg, #84CC16 0%, #A3E635 100%);
+  color: #0C0A1D;
+  font-weight: 600;
+  padding: 1rem 2rem;
+  border-radius: 12px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 0 30px rgba(132, 204, 22, 0.3);
+}
+
+.btn-primary::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, #A3E635 0%, #84CC16 100%);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 0 50px rgba(132, 204, 22, 0.5);
+}
+
+.btn-primary:hover::before {
+  opacity: 1;
+}
+
+.btn-primary span {
+  position: relative;
+  z-index: 1;
+}
+
+/* Pulse animation for CTA */
+.pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 30px rgba(132, 204, 22, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 50px rgba(132, 204, 22, 0.5), 0 0 80px rgba(132, 204, 22, 0.2);
+  }
+}
+
+/* Hero CTA - Extra pop */
+.btn-primary-hero {
+  background: linear-gradient(135deg, #84CC16 0%, #A3E635 100%);
+  color: #0C0A1D;
+  font-weight: 600;
+  padding: 1rem 2rem;
+  border-radius: 12px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 0 20px rgba(132, 204, 22, 0.4), 0 0 40px rgba(132, 204, 22, 0.2);
+  animation: hero-pulse 2.5s ease-in-out infinite;
+}
+
+.btn-primary-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, #A3E635 0%, #84CC16 100%);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.btn-primary-hero:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 0 30px rgba(132, 204, 22, 0.5), 0 0 60px rgba(132, 204, 22, 0.3);
+}
+
+.btn-primary-hero:hover::before {
+  opacity: 1;
+}
+
+.btn-primary-hero span {
+  position: relative;
+  z-index: 1;
+}
+
+@keyframes hero-pulse {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(132, 204, 22, 0.4), 0 0 40px rgba(132, 204, 22, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(132, 204, 22, 0.5), 0 0 60px rgba(132, 204, 22, 0.3), 0 0 90px rgba(132, 204, 22, 0.15);
+  }
+}
+
+.btn-secondary {
+  background: transparent;
+  color: #F8FAFC;
+  font-weight: 500;
+  padding: 1rem 2rem;
+  border-radius: 12px;
+  border: 1px solid rgba(139, 92, 246, 0.15);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-secondary:hover {
+  background: rgba(139, 92, 246, 0.05);
+  border-color: #8B5CF6;
+  transform: translateY(-2px);
+}
+
+/* ============================================
+   INPUT FIELDS
+   ============================================ */
+
+.input-field {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(139, 92, 246, 0.15);
+  border-radius: 12px;
+  padding: 1rem 1.5rem;
+  color: #F8FAFC;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  font-size: 1rem;
+}
+
+.input-field::placeholder {
+  color: #64748B;
+}
+
+.input-field:focus {
+  outline: none;
+  border-color: #8B5CF6;
+  box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.15);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* ============================================
+   SCROLL ANIMATIONS
+   ============================================ */
+
+.fade-in-up {
+  opacity: 0;
+  transform: translateY(30px);
+  animation: fade-in-up 0.8s ease-out forwards;
+}
+
+.fade-in-up-delay-1 { animation-delay: 0.1s; }
+.fade-in-up-delay-2 { animation-delay: 0.2s; }
+.fade-in-up-delay-3 { animation-delay: 0.3s; }
+.fade-in-up-delay-4 { animation-delay: 0.4s; }
+.fade-in-up-delay-5 { animation-delay: 0.5s; }
+
+@keyframes fade-in-up {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Staggered entrance */
+.stagger-children > * {
+  opacity: 0;
+  transform: translateY(20px);
+  animation: fade-in-up 0.6s ease-out forwards;
+}
+
+.stagger-children > *:nth-child(1) { animation-delay: 0.1s; }
+.stagger-children > *:nth-child(2) { animation-delay: 0.2s; }
+.stagger-children > *:nth-child(3) { animation-delay: 0.3s; }
+.stagger-children > *:nth-child(4) { animation-delay: 0.4s; }
+.stagger-children > *:nth-child(5) { animation-delay: 0.5s; }
+.stagger-children > *:nth-child(6) { animation-delay: 0.6s; }
+
+/* ============================================
+   BADGE STYLES
+   ============================================ */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: rgba(132, 204, 22, 0.1);
+  border: 1px solid rgba(132, 204, 22, 0.3);
+  border-radius: 100px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #84CC16;
+}
+
+.badge-dot {
+  width: 8px;
+  height: 8px;
+  background: #84CC16;
+  border-radius: 50%;
+  animation: badge-pulse 2s ease-in-out infinite;
+}
+
+@keyframes badge-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.2); }
+}
+
+/* ============================================
+   FEATURE ICONS
+   ============================================ */
+
+.feature-icon {
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(109, 40, 217, 0.2) 0%, rgba(139, 92, 246, 0.1) 100%);
+  border: 1px solid rgba(139, 92, 246, 0.2);
+  border-radius: 16px;
+  font-size: 1.5rem;
+  transition: all 0.3s ease;
+}
+
+.glass-card:hover .feature-icon {
+  background: linear-gradient(135deg, rgba(132, 204, 22, 0.2) 0%, rgba(132, 204, 22, 0.1) 100%);
+  border-color: rgba(132, 204, 22, 0.3);
+  transform: scale(1.1);
+}
+
+/* ============================================
+   LOGO PLACEHOLDER STYLES
+   ============================================ */
+
+.logo-placeholder {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  font-size: 1.125rem;
+  letter-spacing: -0.02em;
+  color: #64748B;
+  opacity: 0.6;
+  transition: all 0.3s ease;
+}
+
+.logo-placeholder:hover {
+  opacity: 1;
+  color: #94A3B8;
+}
+
+/* ============================================
+   SECTION STYLES
+   ============================================ */
+
+.section-dark {
+  background: linear-gradient(180deg, #13111C 0%, #0C0A1D 100%);
+}
+
+/* ============================================
+   RESPONSIVE ADJUSTMENTS
+   ============================================ */
+
+@media (max-width: 768px) {
+  .gradient-orb {
+    width: 300px;
+    height: 300px;
+  }
+  
+  .gradient-orb-2 {
+    width: 200px;
+    height: 200px;
+  }
+}
