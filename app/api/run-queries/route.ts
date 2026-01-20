@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getLLMResponses } from '@/lib/dataforseo/llm-responses'
 import { detectBrandsInText } from '@/lib/dataforseo/llm-mentions'
 import { NextResponse } from 'next/server'
-import type { Brand } from '@/types/database'
+import type { Brand, ResultInsert } from '@/types/database'
 
 export async function POST(request: Request) {
   try {
@@ -76,7 +76,7 @@ export async function POST(request: Request) {
     }
 
     // Process each response and detect brands
-    const resultsToInsert = llmResponses
+    const resultsToInsert: ResultInsert[] = llmResponses
       .filter(r => r.response && r.response.length > 0)
       .map(response => {
         // Detect brands mentioned in the response

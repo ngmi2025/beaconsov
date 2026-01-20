@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import type { BrandInsert } from '@/types/database'
 
 export default function NewBrandPage() {
   const router = useRouter()
@@ -39,13 +40,14 @@ export default function NewBrandPage() {
       .map((a) => a.trim())
       .filter((a) => a.length > 0)
 
-    const { error: insertError } = await supabase.from('brands').insert({
+    const insertData: BrandInsert = {
       user_id: user.id,
       name: name.trim(),
       website: website.trim() || null,
       aliases: aliasArray.length > 0 ? aliasArray : null,
       is_competitor: competitor,
-    })
+    }
+    const { error: insertError } = await supabase.from('brands').insert(insertData)
 
     if (insertError) {
       setError(insertError.message)

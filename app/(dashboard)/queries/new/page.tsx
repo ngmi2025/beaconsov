@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import type { QueryInsert } from '@/types/database'
 
 const categories = [
   'CRM',
@@ -50,12 +51,13 @@ export default function NewQueryPage() {
       return
     }
 
-    const { error: insertError } = await supabase.from('queries').insert({
+    const insertData: QueryInsert = {
       user_id: user.id,
       query_text: queryText.trim(),
       category: category || null,
       is_active: true,
-    })
+    }
+    const { error: insertError } = await supabase.from('queries').insert(insertData)
 
     if (insertError) {
       setError(insertError.message)
