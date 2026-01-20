@@ -56,8 +56,32 @@ export default function ProjectPage() {
   
   // Chart brand selection state
   const [selectedBrandsForChart, setSelectedBrandsForChart] = useState<Set<string>>(new Set())
+  
+  // Copy/download feedback state
+  const [copyFeedback, setCopyFeedback] = useState<string | null>(null)
 
   const supabase = createClient()
+
+  // Utility: Copy to clipboard
+  const copyToClipboard = async (text: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopyFeedback(`${label} copied!`)
+      setTimeout(() => setCopyFeedback(null), 2000)
+    } catch (err) {
+      console.error('Failed to copy:', err)
+    }
+  }
+
+  // Utility: Download as CSV
+  const downloadCSV = (csvContent: string, filename: string) => {
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(blob)
+    link.download = filename
+    link.click()
+    URL.revokeObjectURL(link.href)
+  }
 
   useEffect(() => {
     loadProjectData()
@@ -346,6 +370,57 @@ export default function ProjectPage() {
     )
   }, [keywords, yourBrands, competitors])
 
+  // CSV Generation functions
+  const generateLeaderboardCSV = () => {
+    const headers = ['Rank', 'Brand', 'Type', 'SOV %', 'Mentions', 'Total Responses', 'Trend']
+    const rows = leaderboardData.map(entry => [
+      entry.rank,
+      entry.brand,
+      entry.isYourBrand ? 'Your Brand' : 'Competitor',
+      `${entry.sov}%`,
+      entry.mentions,
+      entry.totalResponses,
+      `${entry.trend} ${entry.trendValue}%`
+    ])
+    return [headers, ...rows].map(row => row.join(',')).join('\n')
+  }
+
+  const generateTrendsCSV = () => {
+    if (trendData.length === 0) return ''
+    const brandNames = brands.map(b => b.name)
+    const headers = ['Date', ...brandNames]
+    const rows = trendData.map(point => {
+      const row = [point.label]
+      brandNames.forEach(name => {
+        const value = point[name]
+        row.push(typeof value === 'number' ? `${value.toFixed(1)}%` : '0%')
+      })
+      return row
+    })
+    return [headers, ...rows].map(row => row.join(',')).join('\n')
+  }
+
+  const generateKeywordsCSV = () => {
+    const headers = ['Keyword', 'Your SOV %', 'Leader', 'Leader SOV %']
+    const rows = keywordSOVData.map(kw => [
+      `"${kw.keyword}"`,
+      `${kw.yourSOV}%`,
+      kw.leader,
+      `${kw.leaderSOV}%`
+    ])
+    return [headers, ...rows].map(row => row.join(',')).join('\n')
+  }
+
+  // Copy/Download handlers
+  const handleCopyLeaderboard = () => copyToClipboard(generateLeaderboardCSV(), 'Leaderboard')
+  const handleDownloadLeaderboard = () => downloadCSV(generateLeaderboardCSV(), `${project?.name || 'project'}-leaderboard.csv`)
+  
+  const handleCopyTrends = () => copyToClipboard(generateTrendsCSV(), 'Trends')
+  const handleDownloadTrends = () => downloadCSV(generateTrendsCSV(), `${project?.name || 'project'}-trends.csv`)
+  
+  const handleCopyKeywords = () => copyToClipboard(generateKeywordsCSV(), 'Keywords')
+  const handleDownloadKeywords = () => downloadCSV(generateKeywordsCSV(), `${project?.name || 'project'}-keywords.csv`)
+
   // Chart colors
   const brandColors: Record<string, string> = {}
   yourBrands.forEach((b, i) => {
@@ -376,6 +451,13 @@ export default function ProjectPage() {
 
   return (
     <div className="max-w-7xl mx-auto">
+      {/* Copy feedback toast */}
+      {copyFeedback && (
+        <div className="fixed top-4 right-4 z-50 px-4 py-2 bg-lime-600 text-white text-sm font-medium rounded-lg shadow-lg animate-pulse">
+          ✓ {copyFeedback}
+        </div>
+      )}
+      
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -459,6 +541,28 @@ export default function ProjectPage() {
                 <h2 className="text-lg font-semibold text-slate-50">SOV Leaderboard</h2>
                 <p className="text-sm text-slate-400">Rankings based on {keywords.length} keywords across 4 AI platforms</p>
               </div>
+              {leaderboardData.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleCopyLeaderboard}
+                    className="px-3 py-1.5 bg-white/5 hover:bg-white/10 text-slate-400 hover:text-slate-300 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                    Copy
+                  </button>
+                  <button
+                    onClick={handleDownloadLeaderboard}
+                    className="px-3 py-1.5 bg-white/5 hover:bg-white/10 text-slate-400 hover:text-slate-300 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    CSV
+                  </button>
+                </div>
+              )}
             </div>
             
             {leaderboardData.length === 0 ? (
@@ -535,9 +639,33 @@ export default function ProjectPage() {
         {/* Trends Tab */}
         {activeTab === 'trends' && (
           <div className="p-6">
-            <div className="mb-6">
-              <h2 className="text-lg font-semibold text-slate-50">SOV Over Time</h2>
-              <p className="text-sm text-slate-400">Weekly Share of Voice trends • Click brand names to toggle</p>
+            <div className="mb-6 flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-slate-50">SOV Over Time</h2>
+                <p className="text-sm text-slate-400">Weekly Share of Voice trends • Click brand names to toggle</p>
+              </div>
+              {trendData.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleCopyTrends}
+                    className="px-3 py-1.5 bg-white/5 hover:bg-white/10 text-slate-400 hover:text-slate-300 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                    Copy
+                  </button>
+                  <button
+                    onClick={handleDownloadTrends}
+                    className="px-3 py-1.5 bg-white/5 hover:bg-white/10 text-slate-400 hover:text-slate-300 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    CSV
+                  </button>
+                </div>
+              )}
             </div>
 
             {trendData.length > 0 ? (
@@ -625,13 +753,37 @@ export default function ProjectPage() {
                 <h2 className="text-lg font-semibold text-slate-50">Keywords</h2>
                 <p className="text-sm text-slate-400">{keywords.length} keywords tracked</p>
               </div>
-              <button
-                onClick={handleSuggestKeywords}
-                disabled={suggestingKeywords || yourBrands.length === 0}
-                className="px-4 py-2 bg-violet-600/20 hover:bg-violet-600/30 text-violet-400 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
-              >
-                {suggestingKeywords ? 'Generating...' : '✨ AI Suggest Keywords'}
-              </button>
+              <div className="flex items-center gap-2">
+                {keywordSOVData.length > 0 && (
+                  <>
+                    <button
+                      onClick={handleCopyKeywords}
+                      className="px-3 py-1.5 bg-white/5 hover:bg-white/10 text-slate-400 hover:text-slate-300 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                      Copy
+                    </button>
+                    <button
+                      onClick={handleDownloadKeywords}
+                      className="px-3 py-1.5 bg-white/5 hover:bg-white/10 text-slate-400 hover:text-slate-300 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      CSV
+                    </button>
+                  </>
+                )}
+                <button
+                  onClick={handleSuggestKeywords}
+                  disabled={suggestingKeywords || yourBrands.length === 0}
+                  className="px-4 py-2 bg-violet-600/20 hover:bg-violet-600/30 text-violet-400 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+                >
+                  {suggestingKeywords ? 'Generating...' : '✨ AI Suggest Keywords'}
+                </button>
+              </div>
             </div>
 
             {/* AI Suggestions */}
