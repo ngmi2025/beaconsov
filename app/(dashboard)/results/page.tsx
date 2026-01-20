@@ -19,21 +19,23 @@ export default async function ResultsPage() {
     return null
   }
 
-  // Get all results with query info
-  const { data: results } = await supabase
-    .from('results')
-    .select(`
-      *,
-      queries!inner (
-        id,
-        query_text,
-        category,
-        user_id
-      )
-    `)
-    .eq('queries.user_id', user.id)
-    .order('run_at', { ascending: false })
-    .limit(100)
+  // Get user's queries first
+  const { data: queries } = await supabase
+    .from('queries')
+    .select('*')
+    .eq('user_id', user.id)
+
+  const queryIds = queries?.map(q => q.id) || []
+
+  // Get results for those queries
+  const { data: results } = queryIds.length > 0 
+    ? await supabase
+        .from('results')
+        .select('*')
+        .in('query_id', queryIds)
+        .order('run_at', { ascending: false })
+        .limit(100)
+    : { data: [] }
 
   // Get brands for lookup
   const { data: brands } = await supabase
@@ -42,12 +44,13 @@ export default async function ResultsPage() {
     .eq('user_id', user.id)
 
   const brandLookup = new Map(brands?.map(b => [b.id, b]) || [])
+  const queryLookup = new Map(queries?.map(q => [q.id, q]) || [])
 
   // Calculate SOV
   const sovData = calculateSOV(results || [], brandLookup)
   
   // Group results by query
-  const resultsByQuery = groupResultsByQuery(results || [])
+  const resultsByQuery = groupResultsByQuery(results || [], queryLookup)
 
   return (
     <div className="max-w-7xl mx-auto">
@@ -156,8 +159,8 @@ export default async function ResultsPage() {
         </div>
       ) : (
         <div className="space-y-6">
-          {Object.entries(resultsByQuery).map(([queryId, queryResults]) => {
-            const query = queryResults[0]?.queries
+          {Object.entries(resultsByQuery).map(([queryId, data]) => {
+            const { query, results: queryResults } = data
             if (!query) return null
 
             return (
@@ -255,8 +258,26 @@ export default async function ResultsPage() {
   )
 }
 
+interface ResultRow {
+  id: string
+  query_id: string
+  run_at: string
+  llm_provider: string
+  llm_model: string
+  response_text: string
+  brands_mentioned: string[] | null
+  brands_recommended: string[] | null
+}
+
+interface QueryRow {
+  id: string
+  query_text: string
+  category: string | null
+  user_id: string
+}
+
 function calculateSOV(
-  results: Array<{ brands_mentioned: string[] | null; brands_recommended: string[] | null }>,
+  results: ResultRow[],
   brandLookup: Map<string, { id: string; name: string; is_competitor: boolean }>
 ) {
   const mentionCounts = new Map<string, number>()
@@ -290,29 +311,19 @@ function calculateSOV(
   return sovData
 }
 
-interface QueryResult {
-  id: string
-  run_at: string
-  llm_provider: string
-  llm_model: string
-  response_text: string
-  brands_mentioned: string[] | null
-  brands_recommended: string[] | null
-  queries: {
-    id: string
-    query_text: string
-    category: string | null
-    user_id: string
-  } | null
-}
-
-function groupResultsByQuery(results: QueryResult[]): Record<string, QueryResult[]> {
+function groupResultsByQuery(
+  results: ResultRow[], 
+  queryLookup: Map<string, QueryRow>
+): Record<string, { query: QueryRow | undefined; results: ResultRow[] }> {
   return results.reduce((acc, result) => {
-    const queryId = result.queries?.id || 'unknown'
+    const queryId = result.query_id
     if (!acc[queryId]) {
-      acc[queryId] = []
+      acc[queryId] = {
+        query: queryLookup.get(queryId),
+        results: []
+      }
     }
-    acc[queryId].push(result)
+    acc[queryId].results.push(result)
     return acc
-  }, {} as Record<string, QueryResult[]>)
+  }, {} as Record<string, { query: QueryRow | undefined; results: ResultRow[] }>)
 }
