@@ -29,6 +29,12 @@ interface Result {
 
 type TimePeriod = 'daily' | 'weekly' | 'monthly'
 
+interface TimeSeriesDataPoint {
+  period: string
+  label: string
+  [brandId: string]: string | number // Allow indexing by brand ID
+}
+
 export default function AnalyticsPage() {
   const [brands, setBrands] = useState<Brand[]>([])
   const [queries, setQueries] = useState<Query[]>([])
@@ -131,7 +137,7 @@ export default function AnalyticsPage() {
   }, [brands, filteredResults])
 
   // Time-series data for chart
-  const timeSeriesData = useMemo(() => {
+  const timeSeriesData = useMemo((): TimeSeriesDataPoint[] => {
     if (filteredResults.length === 0) return []
 
     // Group results by time period
