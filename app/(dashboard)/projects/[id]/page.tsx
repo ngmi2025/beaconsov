@@ -666,17 +666,33 @@ export default function ProjectPage() {
               </>
             )}
           </button>
-          <div className="text-right">
-            <p className="text-xs text-slate-500">
-              Last updated: {new Date(project.updated_at).toLocaleDateString('en-US', { 
+          <div className="text-right text-xs text-slate-500">
+            <p>
+              Last updated: {new Date(project.updated_at).toLocaleString('en-US', { 
                 month: 'short', 
                 day: 'numeric',
                 hour: 'numeric',
-                minute: '2-digit'
-              })}
+                minute: '2-digit',
+                timeZone: 'America/New_York',
+              })} ET
+            </p>
+            <p>
+              Next update: {(() => {
+                const now = new Date()
+                const tomorrow = new Date(now)
+                tomorrow.setDate(tomorrow.getDate() + 1)
+                tomorrow.setHours(7, 0, 0, 0)
+                return tomorrow.toLocaleString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                  hour: 'numeric',
+                  minute: '2-digit',
+                  timeZone: 'America/New_York',
+                })
+              })()} ET
             </p>
             {!hasRealData && (
-              <p className="text-xs text-amber-500/70">Using sample data • Run analysis for real results</p>
+              <p className="text-amber-500/70 mt-1">Using sample data • Run analysis for real results</p>
             )}
           </div>
         </div>
