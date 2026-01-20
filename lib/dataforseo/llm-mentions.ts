@@ -71,7 +71,12 @@ export async function getBrandMentions(
       keyword,
       aiSearchVolume: result.ai_search_volume || 0,
       impressions: result.impressions || 0,
-      mentions: result.mentions || [],
+      mentions: (result.mentions || []).map(m => ({
+        brand: m.brand,
+        mentionCount: m.mention_count,
+        sentiment: m.sentiment,
+        context: m.context,
+      })),
       brandData: brands.map(brand => {
         const mention = result.mentions?.find(m => 
           m.brand.toLowerCase() === brand.toLowerCase()
