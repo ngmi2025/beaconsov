@@ -320,7 +320,7 @@ export default function ProjectPage() {
                         borderRadius: '8px',
                       }}
                       labelStyle={{ color: '#f8fafc' }}
-                      formatter={(value: number) => [`${value.toFixed(1)}%`, '']}
+                      formatter={(value) => [`${(value as number)?.toFixed(1) ?? 0}%`, '']}
                     />
                     <Legend />
                     {brands.map((brand) => (
