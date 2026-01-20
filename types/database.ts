@@ -75,6 +75,7 @@ export interface Database {
           user_id: string
           query_text: string
           category: string | null
+          tags: string[] | null
           is_active: boolean
           created_at: string
         }
@@ -83,6 +84,7 @@ export interface Database {
           user_id: string
           query_text: string
           category?: string | null
+          tags?: string[] | null
           is_active?: boolean
           created_at?: string
         }
@@ -91,6 +93,7 @@ export interface Database {
           user_id?: string
           query_text?: string
           category?: string | null
+          tags?: string[] | null
           is_active?: boolean
           created_at?: string
         }
