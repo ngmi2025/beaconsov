@@ -84,7 +84,7 @@ export async function POST(request: Request) {
 
         return {
           query_id: queryId,
-          llm_provider: response.provider as 'openai' | 'anthropic' | 'google' | 'perplexity',
+          llm_provider: response.provider,
           llm_model: response.model,
           response_text: response.response,
           brands_mentioned: detection.mentioned,
@@ -111,8 +111,8 @@ export async function POST(request: Request) {
     const allMentioned = new Set<string>()
     const allRecommended = new Set<string>()
     resultsToInsert.forEach(r => {
-      r.brands_mentioned.forEach(id => allMentioned.add(id))
-      r.brands_recommended.forEach(id => allRecommended.add(id))
+      r.brands_mentioned?.forEach(id => allMentioned.add(id))
+      r.brands_recommended?.forEach(id => allRecommended.add(id))
     })
 
     return NextResponse.json({

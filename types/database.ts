@@ -15,7 +15,7 @@ export interface Database {
           email: string | null
           full_name: string | null
           company_name: string | null
-          plan: 'free' | 'starter' | 'growth' | 'agency'
+          plan: string
           created_at: string
           updated_at: string
         }
@@ -24,7 +24,7 @@ export interface Database {
           email?: string | null
           full_name?: string | null
           company_name?: string | null
-          plan?: 'free' | 'starter' | 'growth' | 'agency'
+          plan?: string
           created_at?: string
           updated_at?: string
         }
@@ -33,10 +33,11 @@ export interface Database {
           email?: string | null
           full_name?: string | null
           company_name?: string | null
-          plan?: 'free' | 'starter' | 'growth' | 'agency'
+          plan?: string
           created_at?: string
           updated_at?: string
         }
+        Relationships: []
       }
       brands: {
         Row: {
@@ -66,6 +67,7 @@ export interface Database {
           website?: string | null
           created_at?: string
         }
+        Relationships: []
       }
       queries: {
         Row: {
@@ -92,12 +94,13 @@ export interface Database {
           is_active?: boolean
           created_at?: string
         }
+        Relationships: []
       }
       results: {
         Row: {
           id: string
           query_id: string
-          llm_provider: 'openai' | 'anthropic' | 'google' | 'perplexity'
+          llm_provider: string
           llm_model: string
           response_text: string
           brands_mentioned: string[] | null
@@ -107,7 +110,7 @@ export interface Database {
         Insert: {
           id?: string
           query_id: string
-          llm_provider: 'openai' | 'anthropic' | 'google' | 'perplexity'
+          llm_provider: string
           llm_model: string
           response_text: string
           brands_mentioned?: string[] | null
@@ -117,13 +120,14 @@ export interface Database {
         Update: {
           id?: string
           query_id?: string
-          llm_provider?: 'openai' | 'anthropic' | 'google' | 'perplexity'
+          llm_provider?: string
           llm_model?: string
           response_text?: string
           brands_mentioned?: string[] | null
           brands_recommended?: string[] | null
           run_at?: string
         }
+        Relationships: []
       }
       query_brands: {
         Row: {
@@ -141,7 +145,20 @@ export interface Database {
           query_id?: string
           brand_id?: string
         }
+        Relationships: []
       }
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      [_ in never]: never
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
     }
   }
 }
