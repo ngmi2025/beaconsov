@@ -4,9 +4,8 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { suggestedKeywords, suggestedCompetitors, detectIndustry } from '@/lib/dummy-data'
 
-type Step = 1 | 2 | 3 | 4 | 5
+type Step = 1 | 2 | 3 | 4
 
 interface WizardData {
   projectName: string
@@ -25,6 +24,10 @@ export default function NewProjectWizard() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   
+  // AI suggestion loading states
+  const [suggestingCompetitors, setSuggestingCompetitors] = useState(false)
+  const [suggestingKeywords, setSuggestingKeywords] = useState(false)
+  
   const [data, setData] = useState<WizardData>({
     projectName: '',
     websiteUrl: '',
@@ -36,26 +39,8 @@ export default function NewProjectWizard() {
     customKeyword: '',
   })
 
-  // Generate suggestions based on project name
-  const industry = detectIndustry(data.brandName, data.websiteUrl)
-  const competitorSuggestions = suggestedCompetitors[industry] || suggestedCompetitors.default
-  const keywordSuggestions = suggestedKeywords[industry] || suggestedKeywords.default
-
   const updateData = (updates: Partial<WizardData>) => {
     setData(prev => ({ ...prev, ...updates }))
-  }
-
-  const initializeSuggestions = () => {
-    if (data.competitors.length === 0) {
-      updateData({
-        competitors: competitorSuggestions.map(name => ({ name, selected: false })),
-      })
-    }
-    if (data.keywords.length === 0) {
-      updateData({
-        keywords: keywordSuggestions.map(text => ({ text, selected: false })),
-      })
-    }
   }
 
   const toggleCompetitor = (index: number) => {
@@ -88,22 +73,77 @@ export default function NewProjectWizard() {
     }
   }
 
-  const nextStep = () => {
-    if (step === 1 && !data.projectName.trim()) {
-      setError('Please enter a project name')
-      return
+  // AI Suggestion handlers
+  const handleSuggestCompetitors = async () => {
+    if (!data.brandName.trim()) return
+    
+    setSuggestingCompetitors(true)
+    try {
+      const res = await fetch('/api/ai/suggest-competitors', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          brandName: data.brandName,
+          websiteUrl: data.websiteUrl,
+        }),
+      })
+      const result = await res.json()
+      
+      // Filter out already added competitors
+      const existingNames = new Set(data.competitors.map(c => c.name.toLowerCase()))
+      const newCompetitors = (result.competitors || [])
+        .filter((name: string) => !existingNames.has(name.toLowerCase()))
+        .map((name: string) => ({ name, selected: false }))
+      
+      updateData({
+        competitors: [...data.competitors, ...newCompetitors]
+      })
+    } catch (err) {
+      console.error('Failed to get AI suggestions:', err)
+    } finally {
+      setSuggestingCompetitors(false)
     }
-    if (step === 2 && !data.brandName.trim()) {
-      setError('Please enter your brand name')
+  }
+
+  const handleSuggestKeywords = async () => {
+    if (!data.brandName.trim()) return
+    
+    setSuggestingKeywords(true)
+    try {
+      const selectedCompetitors = data.competitors.filter(c => c.selected).map(c => c.name)
+      const res = await fetch('/api/ai/suggest-keywords', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          brandName: data.brandName,
+          competitors: selectedCompetitors,
+        }),
+      })
+      const result = await res.json()
+      
+      // Filter out already added keywords
+      const existingKeywords = new Set(data.keywords.map(k => k.text.toLowerCase()))
+      const newKeywords = (result.keywords || [])
+        .filter((text: string) => !existingKeywords.has(text.toLowerCase()))
+        .map((text: string) => ({ text, selected: false }))
+      
+      updateData({
+        keywords: [...data.keywords, ...newKeywords]
+      })
+    } catch (err) {
+      console.error('Failed to get AI keyword suggestions:', err)
+    } finally {
+      setSuggestingKeywords(false)
+    }
+  }
+
+  const nextStep = () => {
+    if (step === 1 && (!data.projectName.trim() || !data.brandName.trim())) {
+      setError('Please enter project name and brand name')
       return
     }
     setError(null)
-    
-    if (step === 2) {
-      initializeSuggestions()
-    }
-    
-    setStep((s) => Math.min(s + 1, 5) as Step)
+    setStep((s) => Math.min(s + 1, 4) as Step)
   }
 
   const prevStep = () => {
@@ -132,7 +172,6 @@ export default function NewProjectWizard() {
           user_id: user.id,
           name: data.projectName.trim(),
           website_url: data.websiteUrl.trim() || null,
-          industry: industry,
         })
         .select()
         .single()
@@ -222,7 +261,7 @@ export default function NewProjectWizard() {
 
       {/* Progress Steps */}
       <div className="flex items-center justify-between mb-8">
-        {[1, 2, 3, 4, 5].map((s) => (
+        {[1, 2, 3, 4].map((s) => (
           <div key={s} className="flex items-center">
             <div
               className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-colors ${
@@ -241,8 +280,8 @@ export default function NewProjectWizard() {
                 s
               )}
             </div>
-            {s < 5 && (
-              <div className={`w-12 h-0.5 mx-2 ${s < step ? 'bg-violet-600' : 'bg-white/10'}`} />
+            {s < 4 && (
+              <div className={`w-16 h-0.5 mx-2 ${s < step ? 'bg-violet-600' : 'bg-white/10'}`} />
             )}
           </div>
         ))}
@@ -250,12 +289,12 @@ export default function NewProjectWizard() {
 
       {/* Step Content */}
       <div className="bg-white/5 border border-white/10 rounded-2xl p-8">
-        {/* Step 1: Project Name */}
+        {/* Step 1: Project & Brand */}
         {step === 1 && (
           <div>
-            <h2 className="text-2xl font-bold text-slate-50 mb-2">Name Your Project</h2>
+            <h2 className="text-2xl font-bold text-slate-50 mb-2">Create New Project</h2>
             <p className="text-slate-400 mb-8">
-              What client or brand are you tracking Share of Voice for?
+              Set up your project and primary brand to track.
             </p>
 
             <div className="space-y-5">
@@ -268,8 +307,37 @@ export default function NewProjectWizard() {
                   value={data.projectName}
                   onChange={(e) => updateData({ projectName: e.target.value })}
                   className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-slate-50 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                  placeholder="e.g., Upgraded Points SOV Tracking"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Your Brand Name *
+                </label>
+                <input
+                  type="text"
+                  value={data.brandName}
+                  onChange={(e) => updateData({ brandName: e.target.value })}
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-slate-50 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-violet-500"
                   placeholder="e.g., Upgraded Points"
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Brand Aliases (optional)
+                </label>
+                <input
+                  type="text"
+                  value={data.brandAliases}
+                  onChange={(e) => updateData({ brandAliases: e.target.value })}
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-slate-50 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                  placeholder="UpgradedPoints, UP (comma separated)"
+                />
+                <p className="mt-1.5 text-xs text-slate-500">
+                  Alternative names or spellings AI might use
+                </p>
               </div>
 
               <div>
@@ -284,83 +352,60 @@ export default function NewProjectWizard() {
                   placeholder="https://upgradedpoints.com"
                 />
                 <p className="mt-1.5 text-xs text-slate-500">
-                  Used to suggest relevant competitors and keywords
+                  Helps AI suggest better competitors
                 </p>
               </div>
             </div>
           </div>
         )}
 
-        {/* Step 2: Your Brand */}
+        {/* Step 2: Competitors */}
         {step === 2 && (
-          <div>
-            <h2 className="text-2xl font-bold text-slate-50 mb-2">Add Your Brand</h2>
-            <p className="text-slate-400 mb-8">
-              This is the brand you're tracking Share of Voice for.
-            </p>
-
-            <div className="space-y-5">
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Brand Name *
-                </label>
-                <input
-                  type="text"
-                  value={data.brandName}
-                  onChange={(e) => updateData({ brandName: e.target.value })}
-                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-slate-50 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-violet-500"
-                  placeholder="e.g., Upgraded Points"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Brand Aliases
-                </label>
-                <input
-                  type="text"
-                  value={data.brandAliases}
-                  onChange={(e) => updateData({ brandAliases: e.target.value })}
-                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-slate-50 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-violet-500"
-                  placeholder="UpgradedPoints, UP (comma separated)"
-                />
-                <p className="mt-1.5 text-xs text-slate-500">
-                  Alternative names or spellings AI might use
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Step 3: Competitors */}
-        {step === 3 && (
           <div>
             <h2 className="text-2xl font-bold text-slate-50 mb-2">Add Competitors</h2>
             <p className="text-slate-400 mb-6">
               Select competitors to track. You can add up to 10.
             </p>
 
-            <div className="bg-violet-600/10 border border-violet-500/20 rounded-xl p-4 mb-6">
-              <p className="text-sm text-slate-300 mb-3">
-                <span className="text-violet-400">💡 AI Suggestions</span> based on "{data.brandName}"
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {data.competitors.map((comp, index) => (
-                  <button
-                    key={index}
-                    onClick={() => toggleCompetitor(index)}
-                    disabled={!comp.selected && selectedCompetitorCount >= 10}
-                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                      comp.selected
-                        ? 'bg-orange-600 text-white'
-                        : 'bg-white/5 text-slate-400 hover:bg-white/10 disabled:opacity-50'
-                    }`}
-                  >
-                    {comp.selected ? '✓ ' : '+ '}{comp.name}
-                  </button>
-                ))}
+            {/* AI Suggest Button */}
+            <button
+              onClick={handleSuggestCompetitors}
+              disabled={suggestingCompetitors}
+              className="w-full mb-6 px-4 py-3 bg-violet-600/20 hover:bg-violet-600/30 text-violet-400 rounded-xl text-sm font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {suggestingCompetitors ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-violet-400/30 border-t-violet-400 rounded-full animate-spin" />
+                  Generating suggestions...
+                </>
+              ) : (
+                <>
+                  ✨ AI Suggest Competitors
+                </>
+              )}
+            </button>
+
+            {data.competitors.length > 0 && (
+              <div className="bg-white/5 border border-white/10 rounded-xl p-4 mb-6">
+                <p className="text-sm text-slate-300 mb-3">Select competitors to track:</p>
+                <div className="flex flex-wrap gap-2">
+                  {data.competitors.map((comp, index) => (
+                    <button
+                      key={index}
+                      onClick={() => toggleCompetitor(index)}
+                      disabled={!comp.selected && selectedCompetitorCount >= 10}
+                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                        comp.selected
+                          ? 'bg-orange-600 text-white'
+                          : 'bg-white/5 text-slate-400 hover:bg-white/10 disabled:opacity-50'
+                      }`}
+                    >
+                      {comp.selected ? '✓ ' : '+ '}{comp.name}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             <div className="flex gap-3">
               <input
@@ -387,34 +432,52 @@ export default function NewProjectWizard() {
           </div>
         )}
 
-        {/* Step 4: Keywords */}
-        {step === 4 && (
+        {/* Step 3: Keywords */}
+        {step === 3 && (
           <div>
             <h2 className="text-2xl font-bold text-slate-50 mb-2">Add Keywords</h2>
             <p className="text-slate-400 mb-6">
               These are the questions we'll ask AI systems to measure Share of Voice.
             </p>
 
-            <div className="bg-violet-600/10 border border-violet-500/20 rounded-xl p-4 mb-6">
-              <p className="text-sm text-slate-300 mb-3">
-                <span className="text-violet-400">💡 AI Suggestions</span> - people might ask:
-              </p>
-              <div className="space-y-2">
-                {data.keywords.map((kw, index) => (
-                  <button
-                    key={index}
-                    onClick={() => toggleKeyword(index)}
-                    className={`w-full text-left px-4 py-3 rounded-lg text-sm transition-all ${
-                      kw.selected
-                        ? 'bg-lime-600/20 text-lime-400 border border-lime-500/30'
-                        : 'bg-white/5 text-slate-300 hover:bg-white/10 border border-transparent'
-                    }`}
-                  >
-                    {kw.selected ? '✓ ' : '+ '}{kw.text}
-                  </button>
-                ))}
+            {/* AI Suggest Button */}
+            <button
+              onClick={handleSuggestKeywords}
+              disabled={suggestingKeywords}
+              className="w-full mb-6 px-4 py-3 bg-violet-600/20 hover:bg-violet-600/30 text-violet-400 rounded-xl text-sm font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {suggestingKeywords ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-violet-400/30 border-t-violet-400 rounded-full animate-spin" />
+                  Generating suggestions...
+                </>
+              ) : (
+                <>
+                  ✨ AI Suggest Keywords
+                </>
+              )}
+            </button>
+
+            {data.keywords.length > 0 && (
+              <div className="bg-white/5 border border-white/10 rounded-xl p-4 mb-6 max-h-64 overflow-y-auto">
+                <p className="text-sm text-slate-300 mb-3">Select keywords to track:</p>
+                <div className="space-y-2">
+                  {data.keywords.map((kw, index) => (
+                    <button
+                      key={index}
+                      onClick={() => toggleKeyword(index)}
+                      className={`w-full text-left px-4 py-3 rounded-lg text-sm transition-all ${
+                        kw.selected
+                          ? 'bg-lime-600/20 text-lime-400 border border-lime-500/30'
+                          : 'bg-white/5 text-slate-300 hover:bg-white/10 border border-transparent'
+                      }`}
+                    >
+                      {kw.selected ? '✓ ' : '+ '}{kw.text}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             <div className="flex gap-3">
               <input
@@ -440,8 +503,8 @@ export default function NewProjectWizard() {
           </div>
         )}
 
-        {/* Step 5: Confirm */}
-        {step === 5 && (
+        {/* Step 4: Confirm */}
+        {step === 4 && (
           <div>
             <h2 className="text-2xl font-bold text-slate-50 mb-2">Ready to Track!</h2>
             <p className="text-slate-400 mb-8">
@@ -452,6 +515,9 @@ export default function NewProjectWizard() {
               <div className="bg-white/5 rounded-xl p-4">
                 <p className="text-sm text-slate-400 mb-1">Project</p>
                 <p className="text-lg font-semibold text-slate-50">{data.projectName}</p>
+                {data.websiteUrl && (
+                  <p className="text-sm text-slate-500">{data.websiteUrl}</p>
+                )}
               </div>
 
               <div className="bg-white/5 rounded-xl p-4">
@@ -464,25 +530,33 @@ export default function NewProjectWizard() {
 
               <div className="bg-white/5 rounded-xl p-4">
                 <p className="text-sm text-slate-400 mb-2">Competitors ({selectedCompetitorCount})</p>
-                <div className="flex flex-wrap gap-2">
-                  {data.competitors.filter(c => c.selected).map((c, i) => (
-                    <span key={i} className="px-2 py-1 bg-orange-600/20 text-orange-400 rounded text-sm">
-                      {c.name}
-                    </span>
-                  ))}
-                </div>
+                {selectedCompetitorCount > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {data.competitors.filter(c => c.selected).map((c, i) => (
+                      <span key={i} className="px-2 py-1 bg-orange-600/20 text-orange-400 rounded text-sm">
+                        {c.name}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-slate-500">No competitors selected</p>
+                )}
               </div>
 
               <div className="bg-white/5 rounded-xl p-4">
                 <p className="text-sm text-slate-400 mb-2">Keywords ({selectedKeywordCount})</p>
-                <div className="space-y-1">
-                  {data.keywords.filter(k => k.selected).slice(0, 5).map((k, i) => (
-                    <p key={i} className="text-sm text-slate-300">• {k.text}</p>
-                  ))}
-                  {selectedKeywordCount > 5 && (
-                    <p className="text-sm text-slate-500">...and {selectedKeywordCount - 5} more</p>
-                  )}
-                </div>
+                {selectedKeywordCount > 0 ? (
+                  <div className="space-y-1">
+                    {data.keywords.filter(k => k.selected).slice(0, 5).map((k, i) => (
+                      <p key={i} className="text-sm text-slate-300">• {k.text}</p>
+                    ))}
+                    {selectedKeywordCount > 5 && (
+                      <p className="text-sm text-slate-500">...and {selectedKeywordCount - 5} more</p>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-sm text-slate-500">No keywords selected</p>
+                )}
               </div>
             </div>
           </div>
@@ -508,7 +582,7 @@ export default function NewProjectWizard() {
             <div />
           )}
 
-          {step < 5 ? (
+          {step < 4 ? (
             <button
               onClick={nextStep}
               className="px-6 py-2.5 bg-violet-600 hover:bg-violet-700 text-white font-semibold rounded-xl transition-colors"
@@ -518,10 +592,10 @@ export default function NewProjectWizard() {
           ) : (
             <button
               onClick={createProject}
-              disabled={loading || selectedKeywordCount === 0}
+              disabled={loading}
               className="px-6 py-2.5 bg-[#84CC16] hover:bg-[#65a30d] text-black font-semibold rounded-xl transition-colors disabled:opacity-50"
             >
-              {loading ? 'Creating...' : 'Create Project & Start Tracking'}
+              {loading ? 'Creating...' : 'Create Project'}
             </button>
           )}
         </div>

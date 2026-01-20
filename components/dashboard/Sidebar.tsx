@@ -22,51 +22,7 @@ const navigation = [
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
       </svg>
     ),
-    badge: 'New',
   },
-  {
-    name: 'Analytics',
-    href: '/analytics',
-    icon: (
-      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
-      </svg>
-    ),
-  },
-]
-
-const legacyNavigation = [
-  {
-    name: 'Brands',
-    href: '/brands',
-    icon: (
-      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-      </svg>
-    ),
-  },
-  {
-    name: 'Queries',
-    href: '/queries',
-    icon: (
-      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-    ),
-  },
-  {
-    name: 'Results',
-    href: '/results',
-    icon: (
-      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-      </svg>
-    ),
-  },
-]
-
-const settingsNav = [
   {
     name: 'Settings',
     href: '/settings',
@@ -97,60 +53,6 @@ export function Sidebar() {
         <div className="space-y-1">
           {navigation.map((item) => {
             const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
-            return (
-              <Link
-                key={item.name}
-                href={item.href}
-                className={`flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                  isActive
-                    ? 'bg-violet-600/20 text-violet-400'
-                    : 'text-slate-400 hover:text-slate-50 hover:bg-white/5'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  {item.icon}
-                  {item.name}
-                </div>
-                {item.badge && (
-                  <span className="px-1.5 py-0.5 bg-lime-500/20 text-lime-400 text-xs rounded">
-                    {item.badge}
-                  </span>
-                )}
-              </Link>
-            )
-          })}
-        </div>
-
-        {/* Legacy Section */}
-        <div className="mt-6 pt-6 border-t border-white/10">
-          <p className="px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-            Legacy
-          </p>
-          <div className="space-y-1">
-            {legacyNavigation.map((item) => {
-              const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
-              return (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                    isActive
-                      ? 'bg-violet-600/20 text-violet-400'
-                      : 'text-slate-500 hover:text-slate-400 hover:bg-white/5'
-                  }`}
-                >
-                  {item.icon}
-                  {item.name}
-                </Link>
-              )
-            })}
-          </div>
-        </div>
-
-        {/* Settings */}
-        <div className="mt-6 pt-6 border-t border-white/10">
-          {settingsNav.map((item) => {
-            const isActive = pathname === item.href
             return (
               <Link
                 key={item.name}

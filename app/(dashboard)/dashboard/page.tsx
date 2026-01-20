@@ -23,10 +23,21 @@ export default async function DashboardPage() {
     .select('*', { count: 'exact', head: true })
     .eq('user_id', user.id)
 
-  const { count: queriesCount } = await supabase
-    .from('queries')
-    .select('*', { count: 'exact', head: true })
+  // Get total keywords across all projects
+  const { data: userProjects } = await supabase
+    .from('projects')
+    .select('id')
     .eq('user_id', user.id)
+
+  let keywordsCount = 0
+  if (userProjects && userProjects.length > 0) {
+    const projectIds = userProjects.map(p => p.id)
+    const { count } = await supabase
+      .from('keywords')
+      .select('*', { count: 'exact', head: true })
+      .in('project_id', projectIds)
+    keywordsCount = count || 0
+  }
 
   // Get recent projects
   const { data: recentProjects } = await supabase
@@ -39,7 +50,7 @@ export default async function DashboardPage() {
   return (
     <div className="max-w-7xl mx-auto">
       <h1 className="text-3xl font-bold text-slate-50 mb-2">Welcome back!</h1>
-      <p className="text-slate-400 mb-8">Here's an overview of your SOV tracking.</p>
+      <p className="text-slate-400 mb-8">Here's an overview of your AI Share of Voice tracking.</p>
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -71,16 +82,16 @@ export default async function DashboardPage() {
           <div className="flex items-center justify-between mb-4">
             <div className="w-12 h-12 bg-orange-500/20 rounded-xl flex items-center justify-center">
               <svg className="w-6 h-6 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
               </svg>
             </div>
           </div>
-          <p className="text-3xl font-bold text-slate-50 mb-1">{queriesCount || 0}</p>
-          <p className="text-slate-400">Queries</p>
+          <p className="text-3xl font-bold text-slate-50 mb-1">{keywordsCount}</p>
+          <p className="text-slate-400">Keywords</p>
         </div>
       </div>
 
-      {/* New Projects Feature Highlight */}
+      {/* New Project CTA for new users */}
       {(projectsCount || 0) === 0 && (
         <div className="bg-gradient-to-br from-violet-600/20 to-violet-800/10 border border-violet-500/20 rounded-2xl p-8 mb-8">
           <div className="flex items-start gap-6">
@@ -88,14 +99,11 @@ export default async function DashboardPage() {
               <span className="text-3xl">🚀</span>
             </div>
             <div className="flex-1">
-              <span className="inline-block px-2 py-1 bg-lime-500/20 text-lime-400 text-xs font-medium rounded mb-3">
-                New Feature
-              </span>
               <h2 className="text-xl font-bold text-slate-50 mb-2">
-                Introducing Projects
+                Get Started with Your First Project
               </h2>
               <p className="text-slate-400 mb-4">
-                Projects help you organize SOV tracking by client. Each project has its own brand, competitors, and keywords — just like how Ahrefs or Semrush work!
+                Projects help you organize SOV tracking by client. Each project tracks your brand, competitors, and keywords — just like Ahrefs or Semrush!
               </p>
               <Link
                 href="/projects/new"
@@ -157,54 +165,35 @@ export default async function DashboardPage() {
       {/* Quick Actions */}
       <div>
         <h2 className="text-lg font-semibold text-slate-50 mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 gap-4">
           <Link
             href="/projects/new"
-            className="flex flex-col items-center gap-3 p-5 bg-white/5 border border-white/10 rounded-xl hover:border-violet-500/50 hover:bg-white/[0.07] transition-all"
+            className="flex items-center gap-4 p-5 bg-white/5 border border-white/10 rounded-xl hover:border-violet-500/50 hover:bg-white/[0.07] transition-all"
           >
-            <div className="w-10 h-10 bg-violet-600/20 rounded-lg flex items-center justify-center">
-              <svg className="w-5 h-5 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div className="w-12 h-12 bg-violet-600/20 rounded-xl flex items-center justify-center">
+              <svg className="w-6 h-6 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
               </svg>
             </div>
-            <span className="text-sm font-medium text-slate-300">New Project</span>
+            <div>
+              <p className="font-semibold text-slate-50">New Project</p>
+              <p className="text-sm text-slate-400">Start tracking a new client</p>
+            </div>
           </Link>
 
           <Link
-            href="/brands/new"
-            className="flex flex-col items-center gap-3 p-5 bg-white/5 border border-white/10 rounded-xl hover:border-violet-500/50 hover:bg-white/[0.07] transition-all"
+            href="/projects"
+            className="flex items-center gap-4 p-5 bg-white/5 border border-white/10 rounded-xl hover:border-violet-500/50 hover:bg-white/[0.07] transition-all"
           >
-            <div className="w-10 h-10 bg-lime-500/20 rounded-lg flex items-center justify-center">
-              <svg className="w-5 h-5 text-lime-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+            <div className="w-12 h-12 bg-lime-500/20 rounded-xl flex items-center justify-center">
+              <svg className="w-6 h-6 text-lime-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
               </svg>
             </div>
-            <span className="text-sm font-medium text-slate-300">Add Brand</span>
-          </Link>
-
-          <Link
-            href="/queries/new"
-            className="flex flex-col items-center gap-3 p-5 bg-white/5 border border-white/10 rounded-xl hover:border-violet-500/50 hover:bg-white/[0.07] transition-all"
-          >
-            <div className="w-10 h-10 bg-orange-500/20 rounded-lg flex items-center justify-center">
-              <svg className="w-5 h-5 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
+            <div>
+              <p className="font-semibold text-slate-50">View All Projects</p>
+              <p className="text-sm text-slate-400">Manage your SOV tracking</p>
             </div>
-            <span className="text-sm font-medium text-slate-300">New Query</span>
-          </Link>
-
-          <Link
-            href="/analytics"
-            className="flex flex-col items-center gap-3 p-5 bg-white/5 border border-white/10 rounded-xl hover:border-violet-500/50 hover:bg-white/[0.07] transition-all"
-          >
-            <div className="w-10 h-10 bg-violet-600/20 rounded-lg flex items-center justify-center">
-              <svg className="w-5 h-5 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
-              </svg>
-            </div>
-            <span className="text-sm font-medium text-slate-300">Analytics</span>
           </Link>
         </div>
       </div>
