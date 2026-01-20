@@ -8,21 +8,25 @@ export default async function DashboardPage() {
     data: { user },
   } = await supabase.auth.getUser()
 
+  if (!user) {
+    return null
+  }
+
   // Get counts
   const { count: brandsCount } = await supabase
     .from('brands')
     .select('*', { count: 'exact', head: true })
-    .eq('user_id', user?.id)
+    .eq('user_id', user.id)
 
   const { count: queriesCount } = await supabase
     .from('queries')
     .select('*', { count: 'exact', head: true })
-    .eq('user_id', user?.id)
+    .eq('user_id', user.id)
 
   const { data: profile } = await supabase
     .from('profiles')
     .select('*')
-    .eq('id', user?.id)
+    .eq('id', user.id)
     .single()
 
   return (

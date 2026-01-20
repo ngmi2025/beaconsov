@@ -10,16 +10,20 @@ export default async function QueriesPage() {
     data: { user },
   } = await supabase.auth.getUser()
 
+  if (!user) {
+    return null
+  }
+
   const { data: queries } = await supabase
     .from('queries')
     .select('*')
-    .eq('user_id', user?.id)
+    .eq('user_id', user.id)
     .order('created_at', { ascending: false })
 
   const { data: brands } = await supabase
     .from('brands')
     .select('id, name')
-    .eq('user_id', user?.id)
+    .eq('user_id', user.id)
 
   return (
     <div className="max-w-7xl mx-auto">

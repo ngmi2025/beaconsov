@@ -15,6 +15,10 @@ export default async function ResultsPage() {
     data: { user },
   } = await supabase.auth.getUser()
 
+  if (!user) {
+    return null
+  }
+
   // Get all results with query info
   const { data: results } = await supabase
     .from('results')
@@ -27,7 +31,7 @@ export default async function ResultsPage() {
         user_id
       )
     `)
-    .eq('queries.user_id', user?.id)
+    .eq('queries.user_id', user.id)
     .order('run_at', { ascending: false })
     .limit(100)
 
@@ -35,7 +39,7 @@ export default async function ResultsPage() {
   const { data: brands } = await supabase
     .from('brands')
     .select('id, name, is_competitor')
-    .eq('user_id', user?.id)
+    .eq('user_id', user.id)
 
   const brandLookup = new Map(brands?.map(b => [b.id, b]) || [])
 

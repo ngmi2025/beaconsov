@@ -9,10 +9,14 @@ export default async function BrandsPage() {
     data: { user },
   } = await supabase.auth.getUser()
 
+  if (!user) {
+    return null
+  }
+
   const { data: brands } = await supabase
     .from('brands')
     .select('*')
-    .eq('user_id', user?.id)
+    .eq('user_id', user.id)
     .order('created_at', { ascending: false })
 
   const myBrands = brands?.filter(b => !b.is_competitor) || []
