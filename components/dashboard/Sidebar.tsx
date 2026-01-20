@@ -15,6 +15,16 @@ const navigation = [
     ),
   },
   {
+    name: 'Projects',
+    href: '/projects',
+    icon: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+      </svg>
+    ),
+    badge: 'New',
+  },
+  {
     name: 'Analytics',
     href: '/analytics',
     icon: (
@@ -24,6 +34,9 @@ const navigation = [
       </svg>
     ),
   },
+]
+
+const legacyNavigation = [
   {
     name: 'Brands',
     href: '/brands',
@@ -51,6 +64,9 @@ const navigation = [
       </svg>
     ),
   },
+]
+
+const settingsNav = [
   {
     name: 'Settings',
     href: '/settings',
@@ -76,35 +92,91 @@ export function Sidebar() {
         </span>
       </div>
 
-      {/* Navigation */}
-      <nav className="px-4 py-6 space-y-1">
-        {navigation.map((item) => {
-          const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
-          return (
-            <Link
-              key={item.name}
-              href={item.href}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                isActive
-                  ? 'bg-violet-600/20 text-violet-400'
-                  : 'text-slate-400 hover:text-slate-50 hover:bg-white/5'
-              }`}
-            >
-              {item.icon}
-              {item.name}
-            </Link>
-          )
-        })}
+      {/* Main Navigation */}
+      <nav className="px-4 py-6">
+        <div className="space-y-1">
+          {navigation.map((item) => {
+            const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
+            return (
+              <Link
+                key={item.name}
+                href={item.href}
+                className={`flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                  isActive
+                    ? 'bg-violet-600/20 text-violet-400'
+                    : 'text-slate-400 hover:text-slate-50 hover:bg-white/5'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  {item.icon}
+                  {item.name}
+                </div>
+                {item.badge && (
+                  <span className="px-1.5 py-0.5 bg-lime-500/20 text-lime-400 text-xs rounded">
+                    {item.badge}
+                  </span>
+                )}
+              </Link>
+            )
+          })}
+        </div>
+
+        {/* Legacy Section */}
+        <div className="mt-6 pt-6 border-t border-white/10">
+          <p className="px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+            Legacy
+          </p>
+          <div className="space-y-1">
+            {legacyNavigation.map((item) => {
+              const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                    isActive
+                      ? 'bg-violet-600/20 text-violet-400'
+                      : 'text-slate-500 hover:text-slate-400 hover:bg-white/5'
+                  }`}
+                >
+                  {item.icon}
+                  {item.name}
+                </Link>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Settings */}
+        <div className="mt-6 pt-6 border-t border-white/10">
+          {settingsNav.map((item) => {
+            const isActive = pathname === item.href
+            return (
+              <Link
+                key={item.name}
+                href={item.href}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                  isActive
+                    ? 'bg-violet-600/20 text-violet-400'
+                    : 'text-slate-400 hover:text-slate-50 hover:bg-white/5'
+                }`}
+              >
+                {item.icon}
+                {item.name}
+              </Link>
+            )
+          })}
+        </div>
       </nav>
 
       {/* Bottom section */}
       <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-white/10">
-        <div className="bg-violet-600/10 rounded-xl p-4">
+        <div className="bg-gradient-to-br from-violet-600/20 to-violet-800/20 rounded-xl p-4 border border-violet-500/20">
           <p className="text-sm font-medium text-slate-50 mb-1">Free Plan</p>
-          <p className="text-xs text-slate-400 mb-3">5 queries remaining</p>
+          <p className="text-xs text-slate-400 mb-3">3 projects • 10 keywords each</p>
           <Link
             href="/settings"
-            className="block text-center text-xs font-medium text-violet-400 hover:text-violet-300"
+            className="block text-center text-xs font-medium text-violet-400 hover:text-violet-300 transition-colors"
           >
             Upgrade plan →
           </Link>
